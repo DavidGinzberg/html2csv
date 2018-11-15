@@ -54,6 +54,7 @@ for table in soup.findAll("table"):
       cols = row.findAll(['td','th'])
       print(f"Found {len(cols)} columns.")
       #TODO: Detect and discard empty tables (those that contain 1 row, 1 column, consisting of an empty string...I think?)
+      #TODO: Add a warning for non-rectangular tables.
       if cols:
         cols = [str(x.text).strip() for x in cols]
         fout.writerow(cols)
