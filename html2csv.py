@@ -7,6 +7,7 @@
 #TODO: Extract TODO comments into github issues
 
 from bs4 import BeautifulSoup
+import os
 import sys
 import csv
 import argparse
@@ -14,6 +15,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Reads in an HTML and attempts to convert all tables into CSV files.')
 parser.add_argument('--delimiter', '-d', action='store', default=',',help="Character with which to separate CSV columns")
 parser.add_argument('--quotechar', '-q', action='store', default='"',help="Character within which to nest CSV text")
+parser.add_argument('--ignoreempty', '-e', action='store_true', help="Ignore empty tables. Helps reduce output on table-layout html pages.")
 parser.add_argument('filename',nargs="?",help="HTML file from which to extract tables")
 args = parser.parse_args()
 
@@ -40,8 +42,10 @@ print("CSVing file")
 tablecount = -1
 for table in soup.findAll("table"):
   tablecount += 1
+  tableisempty = True
   print("Processing Table #%d" % (tablecount))
-  with open(sys.argv[1]+str(tablecount)+'.csv', 'w', newline='') as csvfile:
+  outfilename = sys.argv[1]+str(tablecount)+'.csv'
+  with open(outfilename, 'w', newline='') as csvfile:
     fout = csv.writer(csvfile, delimiter=args.delimiter, quotechar=args.quotechar, quoting=csv.QUOTE_MINIMAL)
     rowcount = 1
     #Removes nested tables. for handling the sins of 1990's web pages.
@@ -57,7 +61,13 @@ for table in soup.findAll("table"):
       #TODO: Add a warning for non-rectangular tables.
       if cols:
         cols = [str(x.text).strip() for x in cols]
-        fout.writerow(cols)
+        if (len(cols) > 1) or len(cols[0]) > 0 :
+          tableisempty = False
+        if not tableisempty:
+          fout.writerow(cols)
+  if args.ignoreempty and tableisempty:
+    print(f"Removing {outfilename} because it is empty and `-e` flag was activated.")
+    os.remove(outfilename)
 #TODO: In HTML documents that use tables for layout (yuck!) add option to detect table titles in preceding sibling tables of size 1x1
 #TODO: Add option to compress multi-line categorical headers (eg: headers with colspan>1) into concatenated-naming-style single row headers
 #  EG: "Population" header spanning above sub-headers "Number" and "Percentage" produces two single-column headers of "Population - Number"
